@@ -27,12 +27,15 @@ ymin = philly06['POINT_Y'].min()  #Southmost point : 39.875032
 # Find Max and Min Longitude value
 xmax = philly06['POINT_X'].max()  #Eastmost point : -74.957504
 xmin = philly06['POINT_X'].min()#Westmost point : -75.27426
-lonlat = zip(philly06.POINT_X.values, p
+lonlat = zip(philly06.POINT_X.values, philly06.POINT_Y.values)
+lat_deg = ymax
+lon_deg = xmin
+delta_lat = ymax-ymin
 delta_long = xmax-xmin
 zoom = 11
 a, bbox = STT.getImageCluster(lat_deg, lon_deg, delta_lat,  delta_long, zoom) 
 
-fig = plt.figure(figsize=(15, 15))
+fig = plt.figure(figsize=(10, 10))
 ax = plt.subplot(111)
 m = Basemap(
     llcrnrlon=bbox[0], llcrnrlat=bbox[1],

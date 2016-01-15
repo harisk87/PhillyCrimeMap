@@ -70,14 +70,14 @@ def num2deg(xtile, ytile, zoom):
 def getImageCluster(lat_deg, lon_deg, delta_lat,  delta_long, zoom):
     smurl = r"http://tile.stamen.com/toner/{0}/{1}/{2}.png"
     xmin, ymax = deg2num(lat_deg, lon_deg, zoom)
-    xmax, ymin = deg2num(lat_deg + delta_lat, lon_deg + delta_long, zoom)
+    xmax, ymin = deg2num(lat_deg - delta_lat, lon_deg + delta_long, zoom)
 
-    bbox_ul = num2deg(xmin, ymin, zoom)
-    bbox_ll = num2deg(xmin, ymax + 1, zoom)
+    bbox_ul = num2deg(xmin, ymax, zoom)
+    bbox_ll = num2deg(xmin, ymin + 1, zoom)
     #print bbox_ul, bbox_ll
 
-    bbox_ur = num2deg(xmax + 1, ymin, zoom)
-    bbox_lr = num2deg(xmax + 1, ymax +1, zoom)
+    bbox_ur = num2deg(xmax + 1, ymax, zoom)
+    bbox_lr = num2deg(xmax + 1, ymin +1, zoom)
     #print bbox_ur, bbox_lr
 
     Cluster = Image.new('RGBA',((xmax-xmin+1)*256-1,(ymax-ymin+1)*256-1) )
