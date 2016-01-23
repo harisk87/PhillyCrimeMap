@@ -8,44 +8,12 @@ Created on Tue Nov 10 14:57:39 2015
 from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
 
 import math
 import urllib2
 import StringIO
-from PIL import Image, ImageFile, PngImagePlugin
+from PIL import Image
 
-#def patched_chunk_tRNS(self, pos, len):
-#    i16 = PngImagePlugin.i16
-#    s = ImageFile._safe_read(self.fp, len)
-#    if self.im_mode == "P":
-#        self.im_info["transparency"] = map(ord, s)
-#    elif self.im_mode == "L":
-#        self.im_info["transparency"] = i16(s)
-#    elif self.im_mode == "RGB":
-#        self.im_info["transparency"] = i16(s), i16(s[2:]), i16(s[4:])
-#    return s
-#PngImagePlugin.PngStream.chunk_tRNS = patched_chunk_tRNS
-#
-#def patched_load(self):
-#    if self.im and self.palette and self.palette.dirty:
-#        apply(self.im.putpalette, self.palette.getdata())
-#        self.palette.dirty = 0
-#        self.palette.rawmode = None
-#        try:
-#            trans = self.info["transparency"]
-#        except KeyError:
-#            self.palette.mode = "RGB"
-#        else:
-#            try:
-#                for i, a in enumerate(trans):
-#                    self.im.putpalettealpha(i, a)
-#            except TypeError:
-#                self.im.putpalettealpha(trans, 0)
-#            self.palette.mode = "RGBA"
-#    if self.im:
-#        return self.im.pixel_access(self.readonly)
-#Image.Image.load = patched_load
 
 def deg2num(lat_deg, lon_deg, zoom):
   lat_rad = math.radians(lat_deg)
@@ -70,17 +38,17 @@ def num2deg(xtile, ytile, zoom):
 def getImageCluster(lat_deg, lon_deg, delta_lat,  delta_long, zoom):
     smurl = r"http://tile.stamen.com/toner/{0}/{1}/{2}.png"
     xmin, ymax = deg2num(lat_deg, lon_deg, zoom)
-    xmax, ymin = deg2num(lat_deg - delta_lat, lon_deg + delta_long, zoom)
+    xmax, ymin = deg2num(lat_deg + delta_lat, lon_deg + delta_long, zoom)
 
-    bbox_ul = num2deg(xmin, ymax, zoom)
-    bbox_ll = num2deg(xmin, ymin + 1, zoom)
+    bbox_ul = num2deg(xmin, ymin, zoom)
+    bbox_ll = num2deg(xmin, ymax + 1, zoom)
     #print bbox_ul, bbox_ll
 
-    bbox_ur = num2deg(xmax + 1, ymax, zoom)
-    bbox_lr = num2deg(xmax + 1, ymin +1, zoom)
+    bbox_ur = num2deg(xmax + 1, ymin, zoom)
+    bbox_lr = num2deg(xmax + 1, ymax +1, zoom)
     #print bbox_ur, bbox_lr
 
-    Cluster = Image.new('RGBA',((xmax-xmin+1)*256-1,(ymax-ymin+1)*256-1) )
+    Cluster = Image.new('RGB',((xmax-xmin+1)*256-1,(ymax-ymin+1)*256-1) )
     for xtile in range(xmin, xmax+1):
         for ytile in range(ymin,  ymax+1):
             try:
@@ -95,26 +63,8 @@ def getImageCluster(lat_deg, lon_deg, delta_lat,  delta_long, zoom):
 
     return Cluster, [bbox_ll[1], bbox_ll[0], bbox_ur[1], bbox_ur[0]]
 
-def main():
-  # Command line parsing function to allow this to be used as a script to plot map tiles
-  # Make a list of command line arguments, omitting the [0] element
-  # which is the script itself.
-  args = sys.argv[1:]
-
-  if not args:
-    print 'usage: lat_deg, lon_deg, delta_lat,  delta_long, zoom \n option -p :  add points to be plotted onto the map with form (long, lat)'
-    sys.exit(1)
-  # Notice the summary flag and remove it from args if it is present.
-  points = False
-  if args[0] == '-p':
-    points = True
-    del args[0]
-  # +++your code here+++ For each filename, get the names, then either print the text output or write it to a summary file
-    lat_deg=args[0]
-    lon_deg=args[1]
-    delta_lat=args[2]
-    delta_long = args[3]
-    zoom = args[4]
+if __name__ == '__main__':
+    lat_deg, lon_deg, delta_lat,  delta_long, zoom = 45.720-0.04/2, 4.210-0.08/2, 0.04,  0.08, 14
     a, bbox = getImageCluster(lat_deg, lon_deg, delta_lat,  delta_long, zoom)
 
     fig = plt.figure(figsize=(10, 10))
@@ -124,17 +74,11 @@ def main():
         urcrnrlon=bbox[2], urcrnrlat=bbox[3],
         projection='merc', ax=ax
     )
-  if points:
-    ls_points = [m(x,y) for x,y in [(4.228, 45.722), (4.219, 45.742), (4.221, 45.737)]]  # Need to fix so it can take lists of points as input, right now it's fixed
-    m.imshow(a, interpolation='nearest', origin='upper')
+    # list of points to display (long, lat)
+    ls_points = [m(x,y) for x,y in [(4.228, 45.722), (4.219, 45.742), (4.221, 45.737)]]
+    m.imshow(a, interpolation='lanczos', origin='upper')
     ax.scatter([point[0] for point in ls_points],
                [point[1] for point in ls_points],
                alpha = 0.9)
     plt.show()
-  else:
-      plt.show()       
-
-if __name__ == '__main__':
-    main()
-
      
