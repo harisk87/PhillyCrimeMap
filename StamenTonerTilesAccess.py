@@ -37,10 +37,11 @@ def num2deg(xtile, ytile, zoom):
 
 def getImageCluster(lat_deg, lon_deg, delta_lat,  delta_long, zoom):
     smurl = r"http://tile.stamen.com/toner/{0}/{1}/{2}.png"
-    xmin, ymax = deg2num(lat_deg, lon_deg, zoom)
-    xmax, ymin = deg2num(lat_deg + delta_lat, lon_deg + delta_long, zoom)
+    #defining n square
+    xmin, ymax = deg2num(lat_deg, lon_deg, zoom) #in the tile names, ymax is southmost tile
+    xmax, ymin = deg2num(lat_deg + delta_lat, lon_deg + delta_long, zoom) 
 
-    bbox_ul = num2deg(xmin, ymin, zoom)
+    bbox_ul = num2deg(xmin, ymin, zoom) #this is upper left because ymin is northmost tile
     bbox_ll = num2deg(xmin, ymax + 1, zoom)
     #print bbox_ul, bbox_ll
 
@@ -62,23 +63,4 @@ def getImageCluster(lat_deg, lon_deg, delta_lat,  delta_long, zoom):
                 tile = None
 
     return Cluster, [bbox_ll[1], bbox_ll[0], bbox_ur[1], bbox_ur[0]]
-
-if __name__ == '__main__':
-    lat_deg, lon_deg, delta_lat,  delta_long, zoom = 45.720-0.04/2, 4.210-0.08/2, 0.04,  0.08, 14
-    a, bbox = getImageCluster(lat_deg, lon_deg, delta_lat,  delta_long, zoom)
-
-    fig = plt.figure(figsize=(10, 10))
-    ax = plt.subplot(111)
-    m = Basemap(
-        llcrnrlon=bbox[0], llcrnrlat=bbox[1],
-        urcrnrlon=bbox[2], urcrnrlat=bbox[3],
-        projection='merc', ax=ax
-    )
-    # list of points to display (long, lat)
-    ls_points = [m(x,y) for x,y in [(4.228, 45.722), (4.219, 45.742), (4.221, 45.737)]]
-    m.imshow(a, interpolation='lanczos', origin='upper')
-    ax.scatter([point[0] for point in ls_points],
-               [point[1] for point in ls_points],
-               alpha = 0.9)
-    plt.show()
      
