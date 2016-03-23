@@ -41,8 +41,8 @@ References
 
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.species_datasets import fetch_species_distributions
-from sklearn.species_datasets.species_distributions import construct_grids
+from sklearn.datasets import fetch_species_distributions
+from sklearn.datasets.species_distributions import construct_grids
 from sklearn.neighbors import KernelDensity
 
 # if basemap is available, we'll use it.

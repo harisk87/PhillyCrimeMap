@@ -13,9 +13,70 @@ import StamenTonerTilesAccess as STT
 from sklearn.neighbors import KernelDensity
 from sklearn.grid_search import GridSearchCV
 
+#==============================================================================
+# Load the Data
+#==============================================================================
 philly06 = pd.read_csv('GIS_POLICE.INCIDENTS_2006.csv')
 
+#Construct a Kernel Density estimate of the distribution
+philly06['Lat'] = philly06['POINT_Y']
+philly06['Long'] = philly06['POINT_X']
 
+#Get crimes that aren't theft
+philly06 = philly06[philly06['UCR_GENERAL']<=500]
+#If we leave theft in, there is a huge concentration in University City/Center City which are the richest/safest parts of the city, we care more about where it is dangerous to be because of crime (and the difference may not even be real, it may be that people in more dangerous parts are less likely to report theft, not that it happens less)
+#when we remove theft, count goes from 90,000+ to 32,759
+
+#Look for null values
+sum(pd.isnull(philly06['Lat'])) 
+sum(pd.isnull(philly06['Long'])) 
+
+#Remove null values from dataframe 
+data = pd.DataFrame(philly06, columns=['Lat','Long'])
+data = data.dropna()
+
+#==============================================================================
+# Optimize bandwidth
+#==============================================================================
+#Create subset of the data to test for best bandwidth (otherwise runtime is very long)
+bw_test_data = data.sample(n=10000,replace=False)
+features = ['Lat', 'Long']
+bw_test_matrix = bw_test_data.as_matrix(columns = features)
+
+#Test for best bandwidth
+params = {'bandwidth': np.logspace(-1., 1., 20)}
+grid = GridSearchCV(KernelDensity(), params)
+grid.fit(bw_test_matrix)
+print("best bandwidth: {0}".format(grid.best_estimator_.bandwidth)) 
+
+#This found that the best estimator was 0.1, since that is the lowest allowed by this set, I will now test a lower range
+params = {'bandwidth': np.logspace(-2., -1., 20)}
+grid = GridSearchCV(KernelDensity(), params)
+grid.fit(bw_test_matrix)
+print("best bandwidth: {0}".format(grid.best_estimator_.bandwidth)) 
+
+#Best bandwidth is again the lowest in the range , 0.01, so I will try again with lower bandwidth range
+params = {'bandwidth': np.logspace(-3., -2., 20)}
+grid = GridSearchCV(KernelDensity(), params)
+grid.fit(bw_test_matrix)
+print("best bandwidth: {0}".format(grid.best_estimator_.bandwidth)) 
+#best bandwidth = 0.00206913808111
+
+#==============================================================================
+# Compute Kernel Density Estimate
+#==============================================================================
+
+# use the best estimator to compute the kernel density estimate
+kde = grid.best_estimator_  #using defaults: Euclidean distance and Gaussian kernel
+
+#Create data matrix
+features = ['Lat', 'Long']
+data_matrix = data.as_matrix(columns = features)
+kde.fit(data_matrix)
+
+#==============================================================================
+# Set up Plots 
+#==============================================================================
 # Find Max and Min Longitude value
 latmax = philly06['POINT_Y'].max()  #Northmost point : 40.137445
 latmin = philly06['POINT_Y'].min()  #Southmost point : 39.875032
@@ -38,45 +99,12 @@ a, bbox = STT.getImageCluster(lat_deg, lon_deg, delta_lat,  delta_long, zoom)
 #          [point[1] for point in ls_points],
 #          alpha = 0.9)
 
-#We use a Kernel Density estimate so that we are no t
-#Construct a Kernel Density estimate of the distribution
-philly06['Lat'] = philly06['POINT_Y']
-philly06['Long'] = philly06['POINT_X']
-
-#clean out bad Lat/Long data from philly06['Long'] and ['Lat]
-[type(i) for i in philly06['Lat'] if type(i)!=np.float64]
-[type(i) for i in philly06['Long'] if type(i)!=np.float64]
-#Look for null values
-sum(pd.isnull(philly06['Lat'])) #1095
-sum(pd.isnull(philly06['Long'])) #1095
-
-#Remove null values from dataframe 
-data = pd.DataFrame(philly06, columns=['Lat','Long'])
-data = data.dropna()
-
-features = ['Lat', 'Long']
-data_matrix = data.as_matrix(columns = features)
-
-#params = {'bandwidth': np.logspace(-1, 1, 20)}
-#grid = GridSearchCV(KernelDensity(), params, 2)
-#grid.fit(data)
-
-#print("best bandwidth: {0}".format(grid.best_estimator_.bandwidth))
-# use the best estimator to compute the kernel density estimate
-#kde = grid.best_estimator_
-
-kde = KernelDensity(bandwidth=0.04, kernel='gaussian')
-kde.fit(data_matrix)
-
-#==============================================================================
-# Set up Contour Plot
-#==============================================================================
 xmin = bbox[0]
 ymin = bbox[1]
 xmax = bbox[2]
 ymax = bbox[3]
-x = np.arange(xmin, xmax,0.003)
-y = np.arange(ymin, ymax, 0.003)
+x = np.arange(xmin, xmax,0.001)
+y = np.arange(ymin, ymax, 0.001)
 X,Y = np.meshgrid(x,y)
 xy = np.vstack([Y.ravel(),X.ravel()]).T
 
@@ -92,17 +120,13 @@ m = Basemap(
     urcrnrlon=bbox[2], urcrnrlat=bbox[3],
     projection='merc', ax=ax
 )
-m.imshow(a, interpolation='lanczos', origin='upper')
+#m.imshow(a, interpolation='lanczos', origin='upper')
 plt.contourf(X, Y, Z, levels=levels, cmap=plt.cm.Reds)
 plt.show()
+#Next Step: Need to figure out how to plot this on top of the map 
 
+#Plots Basic Line plot version
 fig, ax = plt.subplots()
-for bandwidth in [0.1, 0.3, 1.0]:
+for bandwidth in [0.002, 0.01, 0.1]:
     ax.plot(Z,
             label='bw={0}'.format(bandwidth), linewidth=3, alpha=0.5)
-#ax.hist(Z, 30, fc='gray', histtype='stepfilled', alpha=0.3, normed=True)
-#ax.set_xlim(-4.5, 3.5)
-#ax.legend(loc='upper left')
-
-#ax[1, 1].fill(X_plot[:, 0], np.exp(log_dens), fc='#AAAAFF')
-#ax[1, 1].text(-3.5, 0.31, "Gaussian Kernel Density")
