@@ -28,11 +28,11 @@ philly06 = philly06[philly06['UCR_GENERAL']<=500]
 #when we remove theft, count goes from 90,000+ to 32,759
 
 #Look for null values
-sum(pd.isnull(philly06['Lat'])) 
-sum(pd.isnull(philly06['Long'])) 
+sum(pd.isnull(philly06['LAT'])) 
+sum(pd.isnull(philly06['LONG'])) 
 
 #Remove null values from dataframe 
-data = pd.DataFrame(philly06, columns=['Lat','Long'])
+data = pd.DataFrame(philly06, columns=['LAT','LONG'])
 data = data.dropna()
 
 #==============================================================================
@@ -40,7 +40,7 @@ data = data.dropna()
 #==============================================================================
 #Create 10,000 datapoint subset of the data to test for best bandwidth (otherwise runtime is very long)
 bw_test_data = data.sample(n=10000,replace=False)
-features = ['Lat', 'Long']
+features = ['LAT', 'LONG']
 bw_test_matrix = bw_test_data.as_matrix(columns = features)
 
 #Test for best bandwidth
@@ -71,7 +71,7 @@ print("best bandwidth: {0}".format(grid.best_estimator_.bandwidth))
 kde = grid.best_estimator_  #using defaults: Euclidean distance and Gaussian kernel
 
 #Create data matrix
-features = ['Lat', 'Long']
+features = ['LAT', 'LONG']
 data_matrix = data.as_matrix(columns = features)
 kde.fit(data_matrix)
 
@@ -81,19 +81,19 @@ kde.fit(data_matrix)
 # Find Max and Min Longitude value
 
 def getMapSizeandImages(dataframe, zoom=14):
-    latmax = dataframe['POINT_Y'].max()  #Northmost point : 40.137445
-    latmin = dataframe['POINT_Y'].min()  #Southmost point : 39.875032
-    lonmax = dataframe['POINT_X'].max()  #Eastmost point : -74.957504
-    lonmin = dataframe['POINT_X'].min() #Westmost point : -75.27426
+    latmax = dataframe['LAT'].max()  #Northmost point : 40.137445
+    latmin = dataframe['LAT'].min()  #Southmost point : 39.875032
+    lonmax = dataframe['LON'].max()  #Eastmost point : -74.957504
+    lonmin = dataframe['LON'].min() #Westmost point : -75.27426
     delta_lat = latmax-latmin
     delta_long = lonmax-lonmin
-    lat_deg = latmin 
+    lat_deg = latmin
     lon_deg = lonmin
     #
     a, bbox = STT.getImageCluster(lat_deg, lon_deg, delta_lat,  delta_long, zoom)
     return a, bbox
 #zoom = 14 shows whole city, higher values = more zoomed 
-a, bbox = getMapSizeandImages(philly06)
+a, bbox = getMapSizeandImages(data)
 
 #==============================================================================
 # Get Plot dimensions and KDE samples for Contour plot
@@ -204,46 +204,11 @@ plt.savefig('PhillyZoom14_alpha.png')
 
 
 #==============================================================================
-# Overlay with both as RGBA Images
-#==============================================================================
-#Make white pixels in StamenToner tiles image transparent
-from PIL import Image
-map_img = Image.open('PhillyZoom14_map.png')
-map_img = map_img.convert("RGBA")
-datas = map_img.getdata()
-
-newData = []
-for item in datas:
-    if item[0] == 255 and item[1] == 255 and item[2] == 255:
-        newData.append((255, 255, 255, 0))
-    else:
-        newData.append(item)
-map_img.putdata(newData)
-
-#masked_map_img = np.ma.masked_where(map_img != 0, map_img)
-
-contour_img = Image.open('philly2006contour.png')
-#contour_img = contour_img.convert("RGBA")
-extent = X.min(), X.max(), Y.min(), Y.max()
-fig = plt.figure(figsize=(12,12))
-ax = plt.subplot(111)
-contourlayer = plt.imshow(contour_img,interpolation="bicubic",extent=extent)
-plt.hold(True)
-map_layer = plt.imshow(map_img, alpha=.9, interpolation='bilinear',extent=extent)
-plt.show()
-
-#Try just overlaying the two images
-fig, ax = plt.subplots()
-ax.imshow(img2, interpolation="nearest")
-ax.imshow(img, interpolation="none")
-plt.show()
-
-#==============================================================================
 # #Plots Basic Line plot version
 #==============================================================================
 
 fig, ax = plt.subplots()
-for bandwidth in [0.002, 0.01, 0.1]:
+for bandwidth in [0.001, 0.01, 0.1]:
     ax.plot(Z,
             label='bw={0}'.format(bandwidth), linewidth=3, alpha=0.5)
             
