@@ -38,7 +38,7 @@ data = data.dropna()
 #==============================================================================
 # Optimize bandwidth
 #==============================================================================
-#Create subset of the data to test for best bandwidth (otherwise runtime is very long)
+#Create 10,000 datapoint subset of the data to test for best bandwidth (otherwise runtime is very long)
 bw_test_data = data.sample(n=10000,replace=False)
 features = ['Lat', 'Long']
 bw_test_matrix = bw_test_data.as_matrix(columns = features)
@@ -60,8 +60,9 @@ params = {'bandwidth': np.logspace(-3., -2., 20)}
 grid = GridSearchCV(KernelDensity(), params)
 grid.fit(bw_test_matrix)
 print("best bandwidth: {0}".format(grid.best_estimator_.bandwidth)) 
-#best bandwidth = 0.00206913808111
-
+#best bandwidth first time:  0.00206913808111
+#best bandwidth second time: 0.00183298071083
+#best bandwidth third time: 0.00183298071083
 #==============================================================================
 # Compute Kernel Density Estimate
 #==============================================================================
@@ -75,30 +76,28 @@ data_matrix = data.as_matrix(columns = features)
 kde.fit(data_matrix)
 
 #==============================================================================
-# Set up Plots 
+# Set up Plots
 #==============================================================================
 # Find Max and Min Longitude value
-latmax = philly06['POINT_Y'].max()  #Northmost point : 40.137445
-latmin = philly06['POINT_Y'].min()  #Southmost point : 39.875032
-lonmax = philly06['POINT_X'].max()  #Eastmost point : -74.957504
-lonmin = philly06['POINT_X'].min() #Westmost point : -75.27426
-lonlat = zip(philly06.POINT_X.values, philly06.POINT_Y.values)
-lat_deg = latmin
-lon_deg = lonmin
-delta_lat = latmax-latmin
-delta_long = lonmax-lonmin
-zoom = 14
 
-#lat_deg, lon_deg, delta_lat,  delta_long, zoom = lat_deg-delta_lat/2, lon_deg-delta_long/2, delta_lat,  delta_long, 11
-#lat_deg, lon_deg, delta_lat,  delta_long, zoom = 45.720-0.04/2, 4.210-0.08/2, 0.04,  0.08, 14
-a, bbox = STT.getImageCluster(lat_deg, lon_deg, delta_lat,  delta_long, zoom)
+def getMapSizeandImages(dataframe, zoom=14):
+    latmax = dataframe['POINT_Y'].max()  #Northmost point : 40.137445
+    latmin = dataframe['POINT_Y'].min()  #Southmost point : 39.875032
+    lonmax = dataframe['POINT_X'].max()  #Eastmost point : -74.957504
+    lonmin = dataframe['POINT_X'].min() #Westmost point : -75.27426
+    delta_lat = latmax-latmin
+    delta_long = lonmax-lonmin
+    lat_deg = latmin 
+    lon_deg = lonmin
+    #
+    a, bbox = STT.getImageCluster(lat_deg, lon_deg, delta_lat,  delta_long, zoom)
+    return a, bbox
+#zoom = 14 shows whole city, higher values = more zoomed 
+a, bbox = getMapSizeandImages(philly06)
 
-##Display points for crime incidences on map tiles (long, lat)
-#ls_points = [m(x,y) for x,y in lonlat]
-#ax.scatter([point[0] for point in ls_points],
-#          [point[1] for point in ls_points],
-#          alpha = 0.9)
-
+#==============================================================================
+# Get Plot dimensions and KDE samples for Contour plot
+#==============================================================================
 xmin = bbox[0]
 ymin = bbox[1]
 xmax = bbox[2]
@@ -107,26 +106,144 @@ x = np.arange(xmin, xmax,0.001)
 y = np.arange(ymin, ymax, 0.001)
 X,Y = np.meshgrid(x,y)
 xy = np.vstack([Y.ravel(),X.ravel()]).T
-
-fig = plt.figure(figsize=(10, 10)) 
-ax = plt.subplot(111)
+#Get KDE for the points in the plot
 Z = np.exp(kde.score_samples(xy))
 Z = Z.reshape(X.shape)
-levels = np.linspace(0, Z.max(), 25)
 
-
+#==============================================================================
+# Plot Stamen Toner Map Tiles
+#==============================================================================
+fig = plt.figure(figsize=(12,12)) 
+ax = plt.subplot(111)
 m = Basemap(
     llcrnrlon=bbox[0], llcrnrlat=bbox[1],
     urcrnrlon=bbox[2], urcrnrlat=bbox[3],
     projection='merc', ax=ax
 )
-#m.imshow(a, interpolation='lanczos', origin='upper')
-plt.contourf(X, Y, Z, levels=levels, cmap=plt.cm.Reds)
-plt.show()
-#Next Step: Need to figure out how to plot this on top of the map 
+m.imshow(a, interpolation='lanczos', origin='upper')
+fig.savefig('PhillyZoom14_map.png', bbox_inches='tight', pad_inches=0)
+#==============================================================================
+# ##Display points for crime incidences on map tiles (long, lat)
+#==============================================================================
+#lonlat = zip(philly06.POINT_X.values, philly06.POINT_Y.values)
+#ls_points = [m(x,y) for x,y in lonlat]
+#ax.scatter([point[0] for point in ls_points],
+#          [point[1] for point in ls_points],
+#          alpha = 0.9)
+#==============================================================================
+# Create Contour Plot
+#==============================================================================
+#Create 'hotness' levels for the contour plot
+#maxZ = 211.50162631233624
+#maxZ 2nd time = 223.53529395143997  
+# Set max level to the highest level of Z at Zoom level = 14 (showing the whole city), so that if we zoom in on a lower-crime area, we won't have the heat levels reset to relative levels
+levels = np.linspace(0, Z.max(), 25)
 
-#Plots Basic Line plot version
+fig = plt.figure(figsize=(12,12))
+ax = plt.subplot(111)
+plt.contourf(X, Y, Z, levels=levels, cmap=plt.cm.Reds)
+fig.savefig('philly2006contour.png', bbox_inches='tight')
+plt.show()
+
+#==============================================================================
+# Make Contour Plot and Save with no frame/axis (for overlay)
+#==============================================================================
+fig = plt.figure(figsize=(12,12))
+ax = fig.add_subplot(111)
+plt.axis("off")
+levels = np.linspace(0, Z.max(), 25)
+plt.contourf(X, Y, Z, levels=levels, cmap=plt.cm.Reds)
+extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()) #gets extent of bbox for just the image
+plt.savefig('philly2006contour.png', bbox_inches=extent)
+
+#==============================================================================
+# Make Map Plot and Save with no frame/axis (for overlay)
+#==============================================================================
+fig = plt.figure(figsize=(12,12))
+ax = fig.add_subplot(111)
+plt.axis("off")
+m = Basemap(
+    llcrnrlon=X.min(), llcrnrlat=Y.min(),
+    urcrnrlon=X.max(), urcrnrlat=Y.max(),
+    projection='merc', ax=ax
+)
+m.imshow(a, alpha=1, interpolation='lanczos', origin='upper')
+extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()) #gets extent of bbox for just the image
+plt.savefig('PhillyZoom14_map.png', bbox_inches=extent)
+
+
+#==============================================================================
+# #Alpha Layer version
+#==============================================================================
+from PIL import Image
+img = Image.open
+img = img.convert("RGBA")
+datas = img.getdata()
+
+newData = []
+for item in datas:
+    if item[0] == 255 and item[1] == 255 and item[2] == 255:
+        newData.append((255, 255, 255, 0))
+    else:
+        newData.append(item)
+img.putdata(newData)
+masked_img = np.ma.masked_where(img == 0, img)
+
+
+import matplotlib.image as mpimg
+fig = plt.figure(figsize=(12,12))
+ax = plt.subplot(111)
+extent = xmin, xmax, ymin, ymax
+img2=mpimg.imread('philly2006contour.png')
+img = mpimg.imread('PhillyZoom14_map.png')
+contourlayer = plt.imshow(img2,interpolation="nearest",extent=extent)
+plt.hold(True)
+maplayer = plt.imshow(img, alpha=.5, interpolation='bilinear',extent=extent)
+plt.show()
+plt.savefig('PhillyZoom14_alpha.png')
+
+
+#==============================================================================
+# Overlay with both as RGBA Images
+#==============================================================================
+#Make white pixels in StamenToner tiles image transparent
+from PIL import Image
+map_img = Image.open('PhillyZoom14_map.png')
+map_img = map_img.convert("RGBA")
+datas = map_img.getdata()
+
+newData = []
+for item in datas:
+    if item[0] == 255 and item[1] == 255 and item[2] == 255:
+        newData.append((255, 255, 255, 0))
+    else:
+        newData.append(item)
+map_img.putdata(newData)
+
+#masked_map_img = np.ma.masked_where(map_img != 0, map_img)
+
+contour_img = Image.open('philly2006contour.png')
+#contour_img = contour_img.convert("RGBA")
+extent = X.min(), X.max(), Y.min(), Y.max()
+fig = plt.figure(figsize=(12,12))
+ax = plt.subplot(111)
+contourlayer = plt.imshow(contour_img,interpolation="bicubic",extent=extent)
+plt.hold(True)
+map_layer = plt.imshow(map_img, alpha=.9, interpolation='bilinear',extent=extent)
+plt.show()
+
+#Try just overlaying the two images
+fig, ax = plt.subplots()
+ax.imshow(img2, interpolation="nearest")
+ax.imshow(img, interpolation="none")
+plt.show()
+
+#==============================================================================
+# #Plots Basic Line plot version
+#==============================================================================
+
 fig, ax = plt.subplots()
 for bandwidth in [0.002, 0.01, 0.1]:
     ax.plot(Z,
             label='bw={0}'.format(bandwidth), linewidth=3, alpha=0.5)
+            
