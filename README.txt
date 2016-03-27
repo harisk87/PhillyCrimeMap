@@ -16,20 +16,16 @@ https://www.opendataphilly.org/dataset/philadelphia-police-part-one-crime-incide
 
 —
 ————
+Philly_Crime_Map.py 
+     	- Plots circles representing crime incidents onto map 
+	- uses StamenToner OpenStreetMap tiles
+	- calls StamenTonerTilesAccess.py (adapted from OpenStreetMap tile code provided here: http://stackoverflow.com/questions/28476117/easy-openstreetmap-tile-displaying-for-python)
+	- Scikit-learn kde model fit onto the data
+	- contour plot created with matplotlib 
+
 Philly_Crime_Map.R 
 	- Plots circles representing crime incidents onto map 
 	- Using Leaflet to make it interactive
-	- Leaflet has heatmap plugin, need to try that out
-
-Philly_Crime_Map.py * 
-       - this is the file we'll use to create the full script
-	- Plots circles representing crime incidents onto map 
-	- uses StamenToner OpenStreetMap tiles
-	- calls StamenTonerTilesAccess.py
-		adapted from OpenStreetMap tile code provided here: http://stackoverflow.com/questions/28476117/easy-openstreetmap-tile-displaying-for-python
-	- Scikit-learn kde model fit onto the data
-	- contour plot created with matplotlib 
-	- right now plot has only one 'hotspot', will need to change parameters so we can get multiple smaller peaks
 ————
 Ideas/Notes/Plans: 
 
