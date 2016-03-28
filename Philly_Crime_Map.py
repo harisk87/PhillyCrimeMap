@@ -111,53 +111,24 @@ Z = np.exp(kde.score_samples(xy))
 Z = Z.reshape(X.shape)
 
 #==============================================================================
-# Plot Stamen Toner Map Tiles
-#==============================================================================
-fig = plt.figure(figsize=(12,12)) 
-ax = plt.subplot(111)
-m = Basemap(
-    llcrnrlon=bbox[0], llcrnrlat=bbox[1],
-    urcrnrlon=bbox[2], urcrnrlat=bbox[3],
-    projection='merc', ax=ax
-)
-m.imshow(a, interpolation='lanczos', origin='upper')
-fig.savefig('PhillyZoom14_map.png', bbox_inches='tight', pad_inches=0)
-#==============================================================================
-# ##Display points for crime incidences on map tiles (long, lat)
-#==============================================================================
-#lonlat = zip(philly06.POINT_X.values, philly06.POINT_Y.values)
-#ls_points = [m(x,y) for x,y in lonlat]
-#ax.scatter([point[0] for point in ls_points],
-#          [point[1] for point in ls_points],
-#          alpha = 0.9)
-#==============================================================================
-# Create Contour Plot
-#==============================================================================
-#Create 'hotness' levels for the contour plot
-#maxZ = 211.50162631233624
-#maxZ 2nd time = 223.53529395143997  
-# Set max level to the highest level of Z at Zoom level = 14 (showing the whole city), so that if we zoom in on a lower-crime area, we won't have the heat levels reset to relative levels
-levels = np.linspace(0, Z.max(), 25)
-
-fig = plt.figure(figsize=(12,12))
-ax = plt.subplot(111)
-plt.contourf(X, Y, Z, levels=levels, cmap=plt.cm.Reds)
-fig.savefig('philly2006contour.png', bbox_inches='tight')
-plt.show()
-
-#==============================================================================
-# Make Contour Plot and Save with no frame/axis (for overlay)
+# Make Contour Plot and Save Image (for overlay)
 #==============================================================================
 fig = plt.figure(figsize=(12,12))
 ax = fig.add_subplot(111)
 plt.axis("off")
-levels = np.linspace(0, Z.max(), 25)
+levels = np.linspace(0, Z.max(), 25) #Create 'hotness' levels for the contour plot
+#maxZ 1st time I ran this code = 211.50162631233624
+#maxZ 2nd time = 223.53529395143997  
+#If we redo map with higher zoom value, we should set max level to the highest level of Z at Zoom level = 14 (showing the whole city), so that if we zoom in on a lower-crime area, we won't have the heat levels reset to relative levels
+
+#Create contour plot
 plt.contourf(X, Y, Z, levels=levels, cmap=plt.cm.Reds)
-extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()) #gets extent of bbox for just the image
-plt.savefig('philly2006contour.png', bbox_inches=extent)
+
+extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()) #gets extent of bbox for just the plot (without the frame/padding), so we can save just the plot extent (no frame / axis), allowing us to overlay the images later
+plt.savefig('philly2006contour.png', bbox_inches=extent) #save image of plot
 
 #==============================================================================
-# Make Map Plot and Save with no frame/axis (for overlay)
+# Plot StamenToner Map Tiles and Save Image (for overlay)
 #==============================================================================
 fig = plt.figure(figsize=(12,12))
 ax = fig.add_subplot(111)
@@ -168,8 +139,8 @@ m = Basemap(
     projection='merc', ax=ax
 )
 m.imshow(a, alpha=1, interpolation='lanczos', origin='upper')
-extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()) #gets extent of bbox for just the image
-plt.savefig('PhillyZoom14_map.png', bbox_inches=extent)
+extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())  #gets extent of bbox for just the plot (without the frame/padding), so we can save just the plot extent (no frame / axis), allowing us to overlay the images later
+plt.savefig('PhillyZoom14_map.png', bbox_inches=extent) #save image of plot
 
 
 #==============================================================================
@@ -204,7 +175,7 @@ plt.savefig('PhillyZoom14_alpha.png')
 
 
 #==============================================================================
-# #Plots Basic Line plot version
+# #Plot Line plot of KDE with different bandwidths for comparison
 #==============================================================================
 
 fig, ax = plt.subplots()
