@@ -125,7 +125,7 @@ levels = np.linspace(0, Z.max(), 25) #Create 'hotness' levels for the contour pl
 plt.contourf(X, Y, Z, levels=levels, cmap=plt.cm.Reds)
 
 extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()) #gets extent of bbox for just the plot (without the frame/padding), so we can save just the plot extent (no frame / axis), allowing us to overlay the images later
-plt.savefig('philly2006contour.png', bbox_inches=extent) #save image of plot
+plt.savefig('philly06_zoom14_contour.png', bbox_inches=extent) #save image of plot
 
 #==============================================================================
 # Plot StamenToner Map Tiles and Save Image (for overlay)
@@ -140,38 +140,25 @@ m = Basemap(
 )
 m.imshow(a, alpha=1, interpolation='lanczos', origin='upper')
 extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())  #gets extent of bbox for just the plot (without the frame/padding), so we can save just the plot extent (no frame / axis), allowing us to overlay the images later
-plt.savefig('PhillyZoom14_map.png', bbox_inches=extent) #save image of plot
+plt.savefig('philly06_zoom14_map.png', bbox_inches=extent) #save image of plot
 
 
 #==============================================================================
 # #Alpha Layer version
 #==============================================================================
-from PIL import Image
-img = Image.open
-img = img.convert("RGBA")
-datas = img.getdata()
-
-newData = []
-for item in datas:
-    if item[0] == 255 and item[1] == 255 and item[2] == 255:
-        newData.append((255, 255, 255, 0))
-    else:
-        newData.append(item)
-img.putdata(newData)
-masked_img = np.ma.masked_where(img == 0, img)
-
-
 import matplotlib.image as mpimg
+
+contour_img = mpimg.imread('philly06_zoom14_contour.png')
+map_img = mpimg.imread('philly06_zoom14_map.png')
+
 fig = plt.figure(figsize=(12,12))
 ax = plt.subplot(111)
 extent = xmin, xmax, ymin, ymax
-img2=mpimg.imread('philly2006contour.png')
-img = mpimg.imread('PhillyZoom14_map.png')
-contourlayer = plt.imshow(img2,interpolation="nearest",extent=extent)
+contourlayer = plt.imshow(contour_img,interpolation="nearest",extent=extent)
 plt.hold(True)
-maplayer = plt.imshow(img, alpha=.5, interpolation='bilinear',extent=extent)
+map_layer = plt.imshow(map_img, alpha=.4, interpolation='bilinear',extent=extent)
 plt.show()
-plt.savefig('PhillyZoom14_alpha.png')
+plt.savefig('philly06_zoom14_alpha.png')
 
 
 #==============================================================================
