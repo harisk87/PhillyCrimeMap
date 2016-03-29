@@ -37,13 +37,3 @@ Map Slider (to go through diff. years)
 	in R:  maybe try using Shiny to add the slider function on top of Leaflet plot
 	in Python : MatPlot has slider function
 
-Ideas for Analyzing/Plotting Data: 
-	- use a kernel density analysis / plop a Gaussian on the points to create a smoothed set of values?
-	- try Voronoi polygons for the heatmap shapes
-
-	- define large-scale clusters with K-means, then use DBscan within those areas
-	- use DBscan with different settings to build up clusters of different sizes
-	- analyze density (just # of crimes/area) for small areas and define hotspots based on 	
-	that
-
-

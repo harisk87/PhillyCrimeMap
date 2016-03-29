@@ -16,23 +16,25 @@ from sklearn.grid_search import GridSearchCV
 #==============================================================================
 # Load the Data
 #==============================================================================
-philly06 = pd.read_csv('GIS_POLICE.INCIDENTS_2006.csv')
+year = '2006'
+crimefile = 'CrimeData/Incidents_%s.csv' % year
+phillycrime = pd.read_csv(crimefile)
 
 #Construct a Kernel Density estimate of the distribution
-philly06['Lat'] = philly06['POINT_Y']
-philly06['Long'] = philly06['POINT_X']
+phillycrime['Lat'] = phillycrime['POINT_Y']
+phillycrime['Long'] = phillycrime['POINT_X']
 
 #Get crimes that aren't theft
-philly06 = philly06[philly06['UCR_GENERAL']<=500]
+phillycrime = phillycrime[phillycrime['UCR_GENERAL']<=500]
 #If we leave theft in, there is a huge concentration in University City/Center City which are the richest/safest parts of the city, we care more about where it is dangerous to be because of crime (and the difference may not even be real, it may be that people in more dangerous parts are less likely to report theft, not that it happens less)
 #when we remove theft, count goes from 90,000+ to 32,759
 
 #Look for null values
-sum(pd.isnull(philly06['LAT'])) 
-sum(pd.isnull(philly06['LONG'])) 
+sum(pd.isnull(phillycrime['LAT'])) 
+sum(pd.isnull(phillycrime['LONG'])) 
 
 #Remove null values from dataframe 
-data = pd.DataFrame(philly06, columns=['LAT','LONG'])
+data = pd.DataFrame(phillycrime, columns=['LAT','LONG'])
 data = data.dropna()
 
 #==============================================================================
