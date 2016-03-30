@@ -68,9 +68,30 @@ plt.savefig(plotname, bbox_inches=extent) #save image of plot
 years = ['2006', '2007']
 
 #for year in years:
+#There was some bad data in Incidents_2007 file, it refused to load in pd.read_csv but would hang indefinitely, I found non-unicode chars in there 
+#I will assume that it may happen for other files also, so will clean all  
 year = '2007'
 crimefile = 'CrimeData/Incidents_%s.csv' % (year)
-phillycrime = pd.read_csv(crimefile, sep=",", header=0,quotechar="\"")
+f = open(crimefile, 'r')
+lines = f.readlines() 
+f.close()
+lines[0]# This shows that the first row (header row) contains some weird characters \xef\xbb\xbf, so I'll clean those out
+#First I tried ignoring the header row,but there are still other weird chars in the file
+
+cleaned_file = 'CrimeData/Incidents_%s_cleaned.csv' %(year)
+#erase file contents if they already exist so that we don't keep appending data to the same file
+f = open(cleaned_file, 'w') 
+f.write('')
+f.close
+f = open(cleaned_file, 'a')
+for l in lines:
+    l = unicode(l, errors='ignore') #will leave out any chars that can't be converted to unicode
+    f.write(l)
+crime_colnames = "X,Y,DC_DIST,SECTOR,DISPATCH_DATE_TIME,DISPATCH_DATE,DISPATCH_TIME,HOUR,DC_KEY,LOCATION_BLOCK,UCR_GENERAL,OBJECTID,TEXT_GENERAL_CODE,POINT_X,POINT_Y,GlobalID"
+crime_colnames = crime_colnames.split(",")
+crime_dtypes = [float, float, int, str, str,str,str,str,float,str,int,int,str,float,float]
+crime_dtypedict = dict(zip(crime_colnames,crime_dtypes))
+phillycrime = pd.read_csv(cleaned_file,names=crime_colnames, dtype= crime_dtypedict, skiprows=[0], sep=",", error_bad_lines=True, engine="c", quotechar="\"", encoding='utf-8')
 
 #Construct a Kernel Density estimate of the distribution
 phillycrime['LAT'] = phillycrime['POINT_Y']
