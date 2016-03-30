@@ -12,21 +12,72 @@ import matplotlib.pyplot as plt
 import StamenTonerTilesAccess as STT
 from sklearn.neighbors import KernelDensity
 from sklearn.grid_search import GridSearchCV
+from matplotlib.widgets import Slider, Button, RadioButtons
 
 #==============================================================================
-# Load the Data
+# Get Philly Map Tiles
 #==============================================================================
-year = '2006'
-crimefile = 'CrimeData/Incidents_%s.csv' % year
-phillycrime = pd.read_csv(crimefile)
+# Find Max and Min Longitude value
+
+def getMapSizeandImages(zoom=14): 
+    #using the 2006 crime data LAT and LONG max/min as default values for zoom = 14
+    latmax = 40.137445  #Northmost point : 40.137445
+    latmin = 39.875032  #Southmost point : 39.875032
+    lonmax = -74.957504 #Eastmost point : -74.957504
+    lonmin = -75.27426  #Westmost point : -75.27426
+    delta_lat = latmax-latmin
+    delta_long = lonmax-lonmin
+    lat_deg = latmin
+    lon_deg = lonmin
+    a, bbox = STT.getImageCluster(lat_deg, lon_deg, delta_lat,  delta_long, zoom)
+    return a, bbox
+#zoom = 14 shows whole city, higher values = more zoomed 
+a, bbox = getMapSizeandImages()
+
+#==============================================================================
+# Get Plot dimensions for Map and Contour
+#==============================================================================
+
+xmin = bbox[0]
+ymin = bbox[1]
+xmax = bbox[2]
+ymax = bbox[3]
+x = np.arange(xmin, xmax,0.001)
+y = np.arange(ymin, ymax, 0.001)
+X,Y = np.meshgrid(x,y)
+xy = np.vstack([Y.ravel(),X.ravel()]).T
+#==============================================================================
+# Plot StamenToner Map Tiles and Save Image (for overlay)
+#==============================================================================
+fig = plt.figure(figsize=(12,12))
+ax = fig.add_subplot(111)
+plt.axis("off")
+m = Basemap(
+    llcrnrlon=X.min(), llcrnrlat=Y.min(),
+    urcrnrlon=X.max(), urcrnrlat=Y.max(),
+    projection='merc', ax=ax
+)
+m.imshow(a, alpha=1, interpolation='lanczos', origin='upper')
+extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())  #gets extent of bbox for just the plot (without the frame/padding), so we can save just the plot extent (no frame / axis), allowing us to overlay the images later    
+plotname = 'philly_zoom14_map.png'
+plt.savefig(plotname, bbox_inches=extent) #save image of plot
+
+#==============================================================================
+# Load the Crime Data
+#==============================================================================
+years = ['2006', '2007']
+
+#for year in years:
+year = '2007'
+crimefile = 'CrimeData/Incidents_%s.csv' % (year)
+phillycrime = pd.read_csv(crimefile, sep=",", header=0,quotechar="\"")
 
 #Construct a Kernel Density estimate of the distribution
-phillycrime['Lat'] = phillycrime['POINT_Y']
-phillycrime['Long'] = phillycrime['POINT_X']
+phillycrime['LAT'] = phillycrime['POINT_Y']
+phillycrime['LONG'] = phillycrime['POINT_X']
 
 #Get crimes that aren't theft
-phillycrime = phillycrime[phillycrime['UCR_GENERAL']<=500]
-#If we leave theft in, there is a huge concentration in University City/Center City which are the richest/safest parts of the city, we care more about where it is dangerous to be because of crime (and the difference may not even be real, it may be that people in more dangerous parts are less likely to report theft, not that it happens less)
+phillycrime = phillycrime[phillycrime['UCR_GENERAL']<=500] #If we leave theft in, there is a huge concentration in University City/Center City which are the richest/safest parts of the city, we care more about where it is dangerous to be because of crime (and the difference may not even be real, it may be that people in more dangerous parts are less likely to report theft, not that it happens less) 
 #when we remove theft, count goes from 90,000+ to 32,759
 
 #Look for null values
@@ -45,26 +96,25 @@ bw_test_data = data.sample(n=10000,replace=False)
 features = ['LAT', 'LONG']
 bw_test_matrix = bw_test_data.as_matrix(columns = features)
 
-#Test for best bandwidth
-params = {'bandwidth': np.logspace(-1., 1., 20)}
-grid = GridSearchCV(KernelDensity(), params)
-grid.fit(bw_test_matrix)
-print("best bandwidth: {0}".format(grid.best_estimator_.bandwidth)) 
+##Test for best bandwidth
+#params = {'bandwidth': np.logspace(-1., 1., 20)}
+#grid = GridSearchCV(KernelDensity(), params)
+#grid.fit(bw_test_matrix)
+#print("best bandwidth: {0}".format(grid.best_estimator_.bandwidth)) 
+##On 2006 data, found that the best estimator was 0.1, since that is the lowest allowed by this set, I will now test a lower range, and not test again for other years since we'll assume the distribution  of the data will be similar enough
+#params = {'bandwidth': np.logspace(-2., -1., 20)}
+#grid = GridSearchCV(KernelDensity(), params)
+#grid.fit(bw_test_matrix)
+#print("best bandwidth: {0}".format(grid.best_estimator_.bandwidth)) 
+##Again, on 2006 data, found that the best estimator was 0.01, since that is the lowest allowed by this set, I will now test a lower range, and not test again for other years since we'll assume the distribution  of the data will be similar enough
 
-#This found that the best estimator was 0.1, since that is the lowest allowed by this set, I will now test a lower range
-params = {'bandwidth': np.logspace(-2., -1., 20)}
-grid = GridSearchCV(KernelDensity(), params)
-grid.fit(bw_test_matrix)
-print("best bandwidth: {0}".format(grid.best_estimator_.bandwidth)) 
-
-#Best bandwidth is again the lowest in the range , 0.01, so I will try again with lower bandwidth range
 params = {'bandwidth': np.logspace(-3., -2., 20)}
 grid = GridSearchCV(KernelDensity(), params)
 grid.fit(bw_test_matrix)
 print("best bandwidth: {0}".format(grid.best_estimator_.bandwidth)) 
-#best bandwidth first time:  0.00206913808111
-#best bandwidth second time: 0.00183298071083
-#best bandwidth third time: 0.00183298071083
+##best bandwidth first time on 2006 data:  0.00206913808111
+##best bandwidth second time on 2006 data: 0.00183298071083
+##best bandwidth third time on 2006 data: 0.00183298071083
 #==============================================================================
 # Compute Kernel Density Estimate
 #==============================================================================
@@ -78,36 +128,9 @@ data_matrix = data.as_matrix(columns = features)
 kde.fit(data_matrix)
 
 #==============================================================================
-# Set up Plots
+# Get KDE samples for Contour plot
 #==============================================================================
-# Find Max and Min Longitude value
 
-def getMapSizeandImages(dataframe, zoom=14):
-    latmax = dataframe['LAT'].max()  #Northmost point : 40.137445
-    latmin = dataframe['LAT'].min()  #Southmost point : 39.875032
-    lonmax = dataframe['LON'].max()  #Eastmost point : -74.957504
-    lonmin = dataframe['LON'].min() #Westmost point : -75.27426
-    delta_lat = latmax-latmin
-    delta_long = lonmax-lonmin
-    lat_deg = latmin
-    lon_deg = lonmin
-    #
-    a, bbox = STT.getImageCluster(lat_deg, lon_deg, delta_lat,  delta_long, zoom)
-    return a, bbox
-#zoom = 14 shows whole city, higher values = more zoomed 
-a, bbox = getMapSizeandImages(data)
-
-#==============================================================================
-# Get Plot dimensions and KDE samples for Contour plot
-#==============================================================================
-xmin = bbox[0]
-ymin = bbox[1]
-xmax = bbox[2]
-ymax = bbox[3]
-x = np.arange(xmin, xmax,0.001)
-y = np.arange(ymin, ymax, 0.001)
-X,Y = np.meshgrid(x,y)
-xy = np.vstack([Y.ravel(),X.ravel()]).T
 #Get KDE for the points in the plot
 Z = np.exp(kde.score_samples(xy))
 Z = Z.reshape(X.shape)
@@ -119,39 +142,24 @@ fig = plt.figure(figsize=(12,12))
 ax = fig.add_subplot(111)
 plt.axis("off")
 levels = np.linspace(0, Z.max(), 25) #Create 'hotness' levels for the contour plot
-#maxZ 1st time I ran this code = 211.50162631233624
-#maxZ 2nd time = 223.53529395143997  
+#maxZ 1st time I ran this code on 2006 data = 211.50162631233624
+#maxZ 2nd time on 2006 data = 223.53529395143997  
 #If we redo map with higher zoom value, we should set max level to the highest level of Z at Zoom level = 14 (showing the whole city), so that if we zoom in on a lower-crime area, we won't have the heat levels reset to relative levels
 
 #Create contour plot
 plt.contourf(X, Y, Z, levels=levels, cmap=plt.cm.Reds)
 
 extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()) #gets extent of bbox for just the plot (without the frame/padding), so we can save just the plot extent (no frame / axis), allowing us to overlay the images later
-plt.savefig('philly06_zoom14_contour.png', bbox_inches=extent) #save image of plot
-
-#==============================================================================
-# Plot StamenToner Map Tiles and Save Image (for overlay)
-#==============================================================================
-fig = plt.figure(figsize=(12,12))
-ax = fig.add_subplot(111)
-plt.axis("off")
-m = Basemap(
-    llcrnrlon=X.min(), llcrnrlat=Y.min(),
-    urcrnrlon=X.max(), urcrnrlat=Y.max(),
-    projection='merc', ax=ax
-)
-m.imshow(a, alpha=1, interpolation='lanczos', origin='upper')
-extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())  #gets extent of bbox for just the plot (without the frame/padding), so we can save just the plot extent (no frame / axis), allowing us to overlay the images later
-plt.savefig('philly06_zoom14_map.png', bbox_inches=extent) #save image of plot
-
+plotname = 'philly%s_zoom14_contour.png' % year
+plt.savefig(plotname, bbox_inches=extent) % year #save image of plot
 
 #==============================================================================
 # #Alpha Layer version
 #==============================================================================
 import matplotlib.image as mpimg
 
-contour_img = mpimg.imread('philly06_zoom14_contour.png')
-map_img = mpimg.imread('philly06_zoom14_map.png')
+contour_img = mpimg.imread('philly%s_zoom14_contour.png') % year
+map_img = mpimg.imread('philly_zoom14_map.png')
 
 fig = plt.figure(figsize=(12,12))
 ax = plt.subplot(111)
@@ -160,8 +168,8 @@ contourlayer = plt.imshow(contour_img,interpolation="nearest",extent=extent)
 plt.hold(True)
 map_layer = plt.imshow(map_img, alpha=.4, interpolation='bilinear',extent=extent)
 plt.show()
-plt.savefig('philly06_zoom14_alpha.png')
-
+plotname = 'philly%s_zoom14_alpha.png' % year
+plt.savefig(plotname, bbox_inches=extent) % year #save image of plot
 
 #==============================================================================
 # #Plot Line plot of KDE with different bandwidths for comparison
@@ -169,6 +177,5 @@ plt.savefig('philly06_zoom14_alpha.png')
 
 fig, ax = plt.subplots()
 for bandwidth in [0.001, 0.01, 0.1]:
-    ax.plot(Z,
-            label='bw={0}'.format(bandwidth), linewidth=3, alpha=0.5)
+    ax.plot(Z, label='bw={0}'.format(bandwidth), linewidth=3, alpha=0.5)
             
