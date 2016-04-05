@@ -142,7 +142,8 @@ best_bandwidths.append(grid.best_estimator_.bandwidth)
 ##best bandwidth first time on 2006 data:  0.00206913808111
 ##best bandwidth second time on 2006 data: 0.00183298071083
 ##best bandwidth third time on 2006 data: 0.00183298071083
-#best bandwidth for 2007: 0.00162377673919
+#best bandwidth for 2007 first time: 0.00162377673919
+#best bandwidth for 2007 second time: 0.00206913808111
 #==============================================================================
 # Compute Kernel Density Estimate
 #==============================================================================
@@ -231,7 +232,7 @@ ax = plt.subplot(111)
 extent = xmin, xmax, ymin, ymax
 contourlayer = plt.imshow(contour_img,interpolation="nearest",extent=extent)
 plt.hold(True)
-map_layer = plt.imshow(map_img, alpha=1, interpolation='bilinear',extent=extent)
+map_layer = plt.imshow(map_img, alpha=.9, interpolation='bilinear',extent=extent)
 plt.show()
 plotname = 'philly%s_zoom%s_masking.png' % (year, zoom)
 plt.savefig(plotname) % (year) #save image of plot
