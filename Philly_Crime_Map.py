@@ -183,7 +183,7 @@ plotname = 'philly%s_zoom%s_contour.png' % (year, zoom)
 plt.savefig(plotname, bbox_inches=extent) #save image of plot
 
 #==============================================================================
-# Overlay Map tile and contour plots 
+# Overlay Map tile and contour plots with Alpha Transparency on whole map
 #==============================================================================
 import matplotlib.image as mpimg
 contourname = 'philly%s_zoom%s_contour.png' %(year, zoom)
@@ -200,4 +200,40 @@ map_layer = plt.imshow(map_img, alpha=.4, interpolation='bilinear',extent=extent
 plt.show()
 plotname = 'philly%s_zoom%s_alpha.png' % (year, zoom)
 plt.savefig(plotname) % (year) #save image of plot
+
+#==============================================================================
+# Playing around with setting transparency levels for colors of map
+#==============================================================================
+#Make white pixels in StamenToner tiles image transparent
+from PIL import Image
+
+mapname = 'philly_zoom%s_map.png' %(zoom) #We load the map for whatever zoom level the variable "zoom" is set to
+
+map_img = Image.open(mapname)
+map_img = map_img.convert("RGBA")
+datas = map_img.getdata()
+
+newData = []
+for item in datas:
+    if item[0] >200 and item[1] >200 and item[2] > 200:
+        newData.append((item[0], item[1], item[2], 0))
+    else:
+        newData.append(item)
+map_img.putdata(newData)
+
+#masked_map_img = np.ma.masked_where(map_img != 0, map_img)
+contourname = 'philly%s_zoom%s_contour.png' %(year, zoom)
+contour_img = Image.open(contourname)
+#contour_img = contour_img.convert("RGBA")
+#extent = X.min(), X.max(), Y.min(), Y.max()
+fig = plt.figure(figsize=(12,12))
+ax = plt.subplot(111)
+extent = xmin, xmax, ymin, ymax
+contourlayer = plt.imshow(contour_img,interpolation="nearest",extent=extent)
+plt.hold(True)
+map_layer = plt.imshow(map_img, alpha=1, interpolation='bilinear',extent=extent)
+plt.show()
+plotname = 'philly%s_zoom%s_alpha.png' % (year, zoom)
+plt.savefig(plotname) % (year) #save image of plot
+
             
