@@ -29,7 +29,7 @@ def getMapSizeandImages(zoom=12):
     delta_long = lonmax-lonmin
     lat_deg = latmin
     lon_deg = lonmin
-    a, bbox = STT.getImageCluster(lat_deg, lon_deg, delta_lat,  delta_long, zoom)
+    a, bbox = STT.getImageCluster(lat_deg, lon_deg, delta_lat*.9,  delta_long*.9, zoom)
     return a, bbox
 #zoom = 14 shows whole city, higher values = more zoomed 
 a, bbox = getMapSizeandImages()
@@ -182,24 +182,24 @@ extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()) #get
 plotname = 'philly%s_zoom%s_contour.png' % (year, zoom)
 plt.savefig(plotname, bbox_inches=extent) #save image of plot
 
-#==============================================================================
-# Overlay Map tile and contour plots with Alpha Transparency on whole map
-#==============================================================================
-import matplotlib.image as mpimg
-contourname = 'philly%s_zoom%s_contour.png' %(year, zoom)
-contour_img = mpimg.imread(contourname)
-mapname = 'philly_zoom%s_map.png' %(zoom) #We load the map for whatever zoom level the variable "zoom" is set to
-map_img = mpimg.imread(mapname)  
-
-fig = plt.figure(figsize=(12,12))
-ax = plt.subplot(111)
-extent = xmin, xmax, ymin, ymax
-contourlayer = plt.imshow(contour_img,interpolation="nearest",extent=extent)
-plt.hold(True)
-map_layer = plt.imshow(map_img, alpha=.4, interpolation='bilinear',extent=extent)
-plt.show()
-plotname = 'philly%s_zoom%s_alpha.png' % (year, zoom)
-plt.savefig(plotname) % (year) #save image of plot
+##==============================================================================
+## Overlay Map tile and contour plots with Alpha Transparency on whole map
+##==============================================================================
+#import matplotlib.image as mpimg
+#contourname = 'philly%s_zoom%s_contour.png' %(year, zoom)
+#contour_img = mpimg.imread(contourname)
+#mapname = 'philly_zoom%s_map.png' %(zoom) #We load the map for whatever zoom level the variable "zoom" is set to
+#map_img = mpimg.imread(mapname)  
+#
+#fig = plt.figure(figsize=(12,12))
+#ax = plt.subplot(111)
+#extent = xmin, xmax, ymin, ymax
+#contourlayer = plt.imshow(contour_img,interpolation="nearest",extent=extent)
+#plt.hold(True)
+#map_layer = plt.imshow(map_img, alpha=.4, interpolation='bilinear',extent=extent)
+#plt.show()
+#plotname = 'philly%s_zoom%s_alpha.png' % (year, zoom)
+#plt.savefig(plotname) % (year) #save image of plot
 
 #==============================================================================
 # Playing around with setting transparency levels for colors of map
@@ -233,7 +233,7 @@ contourlayer = plt.imshow(contour_img,interpolation="nearest",extent=extent)
 plt.hold(True)
 map_layer = plt.imshow(map_img, alpha=1, interpolation='bilinear',extent=extent)
 plt.show()
-plotname = 'philly%s_zoom%s_alpha.png' % (year, zoom)
+plotname = 'philly%s_zoom%s_masking.png' % (year, zoom)
 plt.savefig(plotname) % (year) #save image of plot
 
             
