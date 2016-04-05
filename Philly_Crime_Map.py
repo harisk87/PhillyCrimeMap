@@ -18,8 +18,8 @@ from matplotlib.widgets import Slider, Button, RadioButtons
 # Get Philly Map Tiles
 #==============================================================================
 # Find Max and Min Longitude value
-
-def getMapSizeandImages(zoom=14): 
+zoom = 12
+def getMapSizeandImages(zoom=12): 
     #using the 2006 crime data LAT and LONG max/min as default values for zoom = 14
     latmax = 40.137445  #Northmost point : 40.137445
     latmin = 39.875032  #Southmost point : 39.875032
@@ -59,15 +59,20 @@ m = Basemap(
 )
 m.imshow(a, alpha=1, interpolation='lanczos', origin='upper')
 extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())  #gets extent of bbox for just the plot (without the frame/padding), so we can save just the plot extent (no frame / axis), allowing us to overlay the images later    
-plotname = 'philly_zoom14_map.png'
+plotname = 'philly_zoom%s_map.png' %(zoom)
 plt.savefig(plotname, bbox_inches=extent) #save image of plot
 
 #==============================================================================
 # Load the Crime Data
 #==============================================================================
-years = ['2006', '2007']
+
+#years = ['2006', '2007']
+
+best_bandwidths = []  #We'll keep track of the best bandwidth parameters found for each model by GridSearchCV so we can make sure they all fell within the range tested (results at the lower and upper bounds would indicate that we should retest with a lower/higher range)
+max_crime_density = [] # Keep track of maximum density estimate for each model (max Z), and use that to set the heatmap levels
 
 #for year in years:
+
 #There was some bad data in Incidents_2007 file, it refused to load in pd.read_csv but would hang indefinitely, I found non-unicode chars in there 
 #I will assume that it may happen for other files also, so will clean all  
 year = '2007'
@@ -91,7 +96,7 @@ crime_colnames = "X,Y,DC_DIST,SECTOR,DISPATCH_DATE_TIME,DISPATCH_DATE,DISPATCH_T
 crime_colnames = crime_colnames.split(",")
 crime_dtypes = [float, float, int, str, str,str,str,str,float,str,int,int,str,float,float]
 crime_dtypedict = dict(zip(crime_colnames,crime_dtypes))
-phillycrime = pd.read_csv(cleaned_file,names=crime_colnames, dtype= crime_dtypedict, skiprows=[0], sep=",", error_bad_lines=True, engine="c", quotechar="\"", encoding='utf-8')
+phillycrime = pd.read_csv(cleaned_file,names=crime_colnames, dtype= crime_dtypedict, skiprows=[0], sep=",", quotechar="\"", encoding='utf-8')
 
 #Construct a Kernel Density estimate of the distribution
 phillycrime['LAT'] = phillycrime['POINT_Y']
@@ -133,9 +138,11 @@ params = {'bandwidth': np.logspace(-3., -2., 20)}
 grid = GridSearchCV(KernelDensity(), params)
 grid.fit(bw_test_matrix)
 print("best bandwidth: {0}".format(grid.best_estimator_.bandwidth)) 
+best_bandwidths.append(grid.best_estimator_.bandwidth)
 ##best bandwidth first time on 2006 data:  0.00206913808111
 ##best bandwidth second time on 2006 data: 0.00183298071083
 ##best bandwidth third time on 2006 data: 0.00183298071083
+#best bandwidth for 2007: 0.00162377673919
 #==============================================================================
 # Compute Kernel Density Estimate
 #==============================================================================
@@ -162,7 +169,8 @@ Z = Z.reshape(X.shape)
 fig = plt.figure(figsize=(12,12))
 ax = fig.add_subplot(111)
 plt.axis("off")
-levels = np.linspace(0, Z.max(), 25) #Create 'hotness' levels for the contour plot
+max_crime_density.append(Z.max())
+levels = np.linspace(0, max(max_crime_density), 25) #Create 'hotness' levels for the contour plot
 #maxZ 1st time I ran this code on 2006 data = 211.50162631233624
 #maxZ 2nd time on 2006 data = 223.53529395143997  
 #If we redo map with higher zoom value, we should set max level to the highest level of Z at Zoom level = 14 (showing the whole city), so that if we zoom in on a lower-crime area, we won't have the heat levels reset to relative levels
@@ -171,16 +179,17 @@ levels = np.linspace(0, Z.max(), 25) #Create 'hotness' levels for the contour pl
 plt.contourf(X, Y, Z, levels=levels, cmap=plt.cm.Reds)
 
 extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()) #gets extent of bbox for just the plot (without the frame/padding), so we can save just the plot extent (no frame / axis), allowing us to overlay the images later
-plotname = 'philly%s_zoom14_contour.png' % year
-plt.savefig(plotname, bbox_inches=extent) % year #save image of plot
+plotname = 'philly%s_zoom%s_contour.png' % (year, zoom)
+plt.savefig(plotname, bbox_inches=extent) #save image of plot
 
 #==============================================================================
-# #Alpha Layer version
+# Overlay Map tile and contour plots 
 #==============================================================================
 import matplotlib.image as mpimg
-
-contour_img = mpimg.imread('philly%s_zoom14_contour.png') % year
-map_img = mpimg.imread('philly_zoom14_map.png')
+contourname = 'philly%s_zoom%s_contour.png' %(year, zoom)
+contour_img = mpimg.imread(contourname)
+mapname = 'philly_zoom%s_map.png' %(zoom) #We load the map for whatever zoom level the variable "zoom" is set to
+map_img = mpimg.imread(mapname)  
 
 fig = plt.figure(figsize=(12,12))
 ax = plt.subplot(111)
@@ -189,14 +198,6 @@ contourlayer = plt.imshow(contour_img,interpolation="nearest",extent=extent)
 plt.hold(True)
 map_layer = plt.imshow(map_img, alpha=.4, interpolation='bilinear',extent=extent)
 plt.show()
-plotname = 'philly%s_zoom14_alpha.png' % year
-plt.savefig(plotname, bbox_inches=extent) % year #save image of plot
-
-#==============================================================================
-# #Plot Line plot of KDE with different bandwidths for comparison
-#==============================================================================
-
-fig, ax = plt.subplots()
-for bandwidth in [0.001, 0.01, 0.1]:
-    ax.plot(Z, label='bw={0}'.format(bandwidth), linewidth=3, alpha=0.5)
+plotname = 'philly%s_zoom%s_alpha.png' % (year, zoom)
+plt.savefig(plotname) % (year) #save image of plot
             
