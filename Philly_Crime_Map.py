@@ -35,7 +35,7 @@ def getMapSizeandImages(zoom=12):
 a, bbox = getMapSizeandImages(zoom)
 
 #==============================================================================
-# Get Plot dimensions for Map and Contour
+# Get Plot dimensions and grid for Map and Contour Plots
 #==============================================================================
 
 xmin = bbox[0]
@@ -61,7 +61,7 @@ m.imshow(a, alpha=1, interpolation='lanczos', origin='upper')
 extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())  #gets extent of bbox for just the plot (without the frame/padding), so we can save just the plot extent (no frame / axis), allowing us to overlay the images later    
 plotname = 'philly_zoom%s_map.png' %(zoom)
 plt.savefig(plotname, bbox_inches=extent) #save image of plot
-plt.close()
+#plt.close()
 #==============================================================================
 # Define function to load the Crime Data
 
@@ -78,13 +78,9 @@ def loadCrimeData(year):
         f = open(crimefile, 'r')
         lines = f.readlines() 
         f.close()
-        lines[0]# This shows that the first row (header row) contains some weird characters \xef\xbb\xbf, so I'll clean those out
-        #First I tried ignoring the header row,but there are still other weird chars in the file
-        
         cleaned_file = 'CrimeData/Incidents_%s_cleaned.csv' %(year)
-        #erase file contents if they already exist so that we don't keep appending data to the same file
-        f = open(cleaned_file, 'w') 
-        f.write('')
+        f = open(cleaned_file, 'w')  
+        f.write('') #erase file contents if they already exist so that if we've run this code before, we don't append the data from the same file to itself in the next step
         f.close
         f = open(cleaned_file, 'a')
         for l in lines:
@@ -211,7 +207,7 @@ def createOverlayImage(year, zoom):
     plt.savefig(plotname)  #save image of plot
 #
 #years = ['2006','2007','2008', '2009','2010','2011', '2012','2013', '2014']
-years = ['2009']
+years = ['2010','2011','2012']
 best_bandwidths = []  #We'll keep track of the best bandwidth parameters found for each model by GridSearchCV so we can make sure they all fell within the range tested (results at the lower and upper bounds would indicate that we should retest with a lower/higher range)
 max_crime_densities = [] # Keep track of maximum density estimate for each model (max Z), and use that to set the heatmap levels 
 max_density = 0    
@@ -221,5 +217,8 @@ for year in years:
     max_crime_densities.append(max_Z)
     max_density = max(max_crime_densities)
 
+#Will create overlay image and save it for a single year
 createOverlayImage('2009',zoom)
+createOverlayImage('2013',zoom)
 
+#

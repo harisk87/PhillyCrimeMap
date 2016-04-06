@@ -1,7 +1,6 @@
 library(leaflet)
 
-crime06<-read.table(file="/Users/heathersimpson/Documents/Data_Science/Philly_Crime/GIS_POLICE.INCIDENTS_2006.csv", sep="," , quote = "\"", header=T, fill = T)
-crime07<-read.table(file="/Users/heathersimpson/Documents/Data_Science/Philly_Crime/CrimeData/Incidents_2007.csv", sep="," , quote = "\"", header=T, fill = T)
+crime06<-read.table(file="/Users/heathersimpson/Documents/Data_Science/Philly_Crime/CrimeData/Incidents_2006.csv", sep="," , quote = "\"", header=T, fill = T)
 
 str(crime06)
 names(crime06)[names(crime06)=="POINT_X"]<-"Long"
