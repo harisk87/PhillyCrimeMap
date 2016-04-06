@@ -63,18 +63,14 @@ plotname = 'philly_zoom%s_map.png' %(zoom)
 plt.savefig(plotname, bbox_inches=extent) #save image of plot
 plt.close()
 #==============================================================================
-# Load the Crime Data
+# Define function to load the Crime Data
+
+#First we clean the data of non-unicode chars so it can be loaded in pd.read_csv
+#Then create dataframe with only the important columns (code (type of crime), latitude and longitude)
+#Then remove null values
+
 #==============================================================================
-
-years = ['2006','2007','2008']
-years = ['2013']
-best_bandwidths = []  #We'll keep track of the best bandwidth parameters found for each model by GridSearchCV so we can make sure they all fell within the range tested (results at the lower and upper bounds would indicate that we should retest with a lower/higher range)
-max_crime_density = [] # Keep track of maximum density estimate for each model (max Z), and use that to set the heatmap levels
-
-for year in years:
-    #First we clean the data
-    #There was some bad data in Incidents_2007 file, it refused to load in pd.read_csv but would hang indefinitely, I found non-unicode chars in there 
-    #2006 file is good, but I will assume that it may happen for other files also, so will clean all  
+def loadCrimeData(year):
     crimefile = 'CrimeData/Incidents_%s.csv' % (year)
     if year == '2006':
         phillycrime = pd.read_csv(crimefile,header=0)
@@ -109,32 +105,24 @@ for year in years:
     #when we remove theft, count goes from 90,000+ to 32,759 in 2006 data
     data['CODE'] = pd.to_numeric(data['CODE'], errors='coerce')
     data = data[data['CODE']<=500]
+    return data
 
-    #==============================================================================
-    # Optimize bandwidth
-    #==============================================================================
+#==============================================================================
+# #Define function to compute the Kernel density estimate
+#==============================================================================
+def computeKDE(data, xy):
     #Create 10,000 datapoint subset of the data to test for best bandwidth (otherwise runtime is very long)
     bw_test_data = data.sample(n=10000,replace=False)
     features = ['LAT', 'LONG']
     bw_test_matrix = bw_test_data.as_matrix(columns = features)
     
     ##Test for best bandwidth
-    #params = {'bandwidth': np.logspace(-1., 1., 20)}
-    #grid = GridSearchCV(KernelDensity(), params)
-    #grid.fit(bw_test_matrix)
-    #print("best bandwidth: {0}".format(grid.best_estimator_.bandwidth)) 
-    ##On 2006 data, found that the best estimator was 0.1, since that is the lowest allowed by this set, I will now test a lower range, and not test again for other years since we'll assume the distribution  of the data will be similar enough
-    #params = {'bandwidth': np.logspace(-2., -1., 20)}
-    #grid = GridSearchCV(KernelDensity(), params)
-    #grid.fit(bw_test_matrix)
-    #print("best bandwidth: {0}".format(grid.best_estimator_.bandwidth)) 
-    ##Again, on 2006 data, found that the best estimator was 0.01, since that is the lowest allowed by this set, I will now test a lower range, and not test again for other years since we'll assume the distribution  of the data will be similar enough
-    
+    #On 2006 data, found that the best estimator was around 0.002 , so will test parameter values in range including this value for the other datasets
     params = {'bandwidth': np.logspace(-3., -2., 20)}
     grid = GridSearchCV(KernelDensity(), params)
     grid.fit(bw_test_matrix)
     print("best bandwidth: {0}".format(grid.best_estimator_.bandwidth)) 
-    best_bandwidths.append(grid.best_estimator_.bandwidth)
+    best_bandwidth = (grid.best_estimator_.bandwidth)
     ##best bandwidth first time on 2006 data:  0.00206913808111
     ##best bandwidth second time on 2006 data: 0.00183298071083
     ##best bandwidth third time on 2006 data: 0.00183298071083
@@ -144,15 +132,15 @@ for year in years:
     #==============================================================================
     # Compute Kernel Density Estimate
     #==============================================================================
-    
+
     # use the best estimator to compute the kernel density estimate
     kde = grid.best_estimator_  #using defaults: Euclidean distance and Gaussian kernel
-    
+
     #Create data matrix
     features = ['LAT', 'LONG']
     data_matrix = data.as_matrix(columns = features)
     kde.fit(data_matrix)
-    
+
     #==============================================================================
     # Get KDE samples for Contour plot
     #==============================================================================
@@ -160,15 +148,20 @@ for year in years:
     #Get KDE for the points in the plot
     Z = np.exp(kde.score_samples(xy))
     Z = Z.reshape(X.shape)
-    
+    return Z, best_bandwidth
+
+def createContourPlot(year, zoom, xy, max_density):
+    data = loadCrimeData(year)
+    Z, bandwidth = computeKDE(data, xy)  #note: xy comes from tile map above, it's the same for any datasets at that map size/zoom level
     #==============================================================================
     # Make Contour Plot and Save Image (for overlay)
     #==============================================================================
     fig = plt.figure(figsize=(12,12))
     ax = fig.add_subplot(111)
     plt.axis("off")
-    max_crime_density.append(Z.max())
-    levels = np.linspace(0, max(max_crime_density), 25) #Create 'hotness' levels for the contour plot
+    if max_density < Z.max():
+        max_density = Z.max()
+    levels = np.linspace(0, max_density, 25) #Create 'hotness' levels for the contour plot
     #maxZ 1st time I ran this code on 2006 data = 211.50162631233624
     #maxZ 2nd time on 2006 data = 223.53529395143997  
     #If we redo map with higher zoom value, we should set max level to the highest level of Z at Zoom level = 14 (showing the whole city), so that if we zoom in on a lower-crime area, we won't have the heat levels reset to relative levels
@@ -180,12 +173,14 @@ for year in years:
     plotname = 'philly%s_zoom%s_contour.png' % (year, zoom)
     plt.savefig(plotname, bbox_inches=extent) #save image of plot
     plt.close()
-    #==============================================================================
-    # Playing around with setting transparency levels for colors of map
-    #==============================================================================
-    #Make white pixels in StamenToner tiles image transparent
+    return bandwidth, Z.max()
+#==============================================================================
+#Function to Create Overlay of Contour and Map Tiles using added transparency (alpha) values
+#==============================================================================
+
+def createOverlayImage(year, zoom):
+    #Make white/light grey pixels in StamenToner tiles image transparent
     from PIL import Image
-    
     mapname = 'philly_zoom%s_map.png' %(zoom) #We load the map for whatever zoom level the variable "zoom" is set to
     
     map_img = Image.open(mapname)
@@ -207,7 +202,7 @@ for year in years:
     #extent = X.min(), X.max(), Y.min(), Y.max()
     fig = plt.figure(figsize=(13,13))
     ax = plt.subplot(111)
-    extent = xmin, xmax, ymin, ymax
+    extent = xmin, xmax, ymin, ymax #note xmin, xmax, ymin, ymax come from tile map at beginning of script
     contourlayer = plt.imshow(contour_img,interpolation="nearest",extent=extent)
     plt.hold(True)
     map_layer = plt.imshow(map_img, alpha=1, interpolation='bilinear',extent=extent)
@@ -215,4 +210,16 @@ for year in years:
     plotname = 'philly%s_zoom%s_overlay.png' % (year, zoom)
     plt.savefig(plotname)  #save image of plot
 #
-            
+#years = ['2006','2007','2008', '2009','2010','2011', '2012','2013', '2014']
+years = ['2009']
+best_bandwidths = []  #We'll keep track of the best bandwidth parameters found for each model by GridSearchCV so we can make sure they all fell within the range tested (results at the lower and upper bounds would indicate that we should retest with a lower/higher range)
+max_crime_densities = [] # Keep track of maximum density estimate for each model (max Z), and use that to set the heatmap levels 
+max_density = 0    
+for year in years:
+    bandwidth, max_Z = createContourPlot(year, zoom, xy, max_density)
+    best_bandwidths.append(bandwidth)
+    max_crime_densities.append(max_Z)
+    max_density = max(max_crime_densities)
+
+createOverlayImage('2009',zoom)
+
