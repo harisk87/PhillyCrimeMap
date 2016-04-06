@@ -67,7 +67,7 @@ plt.close()
 #==============================================================================
 
 years = ['2006','2007','2008']
-
+years = ['2013']
 best_bandwidths = []  #We'll keep track of the best bandwidth parameters found for each model by GridSearchCV so we can make sure they all fell within the range tested (results at the lower and upper bounds would indicate that we should retest with a lower/higher range)
 max_crime_density = [] # Keep track of maximum density estimate for each model (max Z), and use that to set the heatmap levels
 
@@ -96,26 +96,20 @@ for year in years:
             f.write(l)
         crime_colnames = "X,Y,DC_DIST,SECTOR,DISPATCH_DATE_TIME,DISPATCH_DATE,DISPATCH_TIME,HOUR,DC_KEY,LOCATION_BLOCK,UCR_GENERAL,OBJECTID,TEXT_GENERAL_CODE,POINT_X,POINT_Y,GlobalID"
         crime_colnames = crime_colnames.split(",")
-        crime_dtypes = [float, float, int, str, str,str,str,str,float,str,int,int,str,float,float]
+        crime_dtypes = [str, str, str, str, str,str,str,str,str,str,object,str,str,float,float,str]
         crime_dtypedict = dict(zip(crime_colnames,crime_dtypes))
-        phillycrime = pd.read_csv(cleaned_file,names=crime_colnames, dtype= crime_dtypedict, skiprows=[0], sep=",", quotechar="\"", encoding='utf-8')
+        phillycrime = pd.read_csv(cleaned_file,names=crime_colnames, dtype= crime_dtypedict, skiprows=[0], engine='c',sep=",", quotechar="\"", encoding='utf-8')
+    data = pd.DataFrame(data = {'CODE': phillycrime['UCR_GENERAL'], 'LAT':phillycrime['POINT_Y'],'LONG':phillycrime['POINT_X']})
     
-    #Construct a Kernel Density estimate of the distribution
-    phillycrime['LAT'] = phillycrime['POINT_Y']
-    phillycrime['LONG'] = phillycrime['POINT_X']
-    
-    #Get crimes that aren't theft
-    phillycrime = phillycrime[phillycrime['UCR_GENERAL']<=500] #If we leave theft in, there is a huge concentration in University City/Center City which are the richest/safest parts of the city, we care more about where it is dangerous to be because of crime (and the difference may not even be real, it may be that people in more dangerous parts are less likely to report theft, not that it happens less) 
-    #when we remove theft, count goes from 90,000+ to 32,759
-    
-    #Look for null values
-    sum(pd.isnull(phillycrime['LAT'])) 
-    sum(pd.isnull(phillycrime['LONG'])) 
-    
-    #Remove null values from dataframe 
-    data = pd.DataFrame(phillycrime, columns=['LAT','LONG'])
+    #Drop NA values
     data = data.dropna()
     
+    #Now we can convert CODE back to integer (which is not allowed with NAs), and use the values to remove theft from the dataframe
+    #We want to remove theft, because with it there is a huge concentration of crime in University City/Center City which are some of the richest/safest parts of the city, we care more about where it is dangerous to be because of crime (and the difference may not even be real, it may be that people in more dangerous parts are less likely to report theft, not that it happens less) 
+    #when we remove theft, count goes from 90,000+ to 32,759 in 2006 data
+    data['CODE'] = pd.to_numeric(data['CODE'], errors='coerce')
+    data = data[data['CODE']<=500]
+
     #==============================================================================
     # Optimize bandwidth
     #==============================================================================
@@ -186,25 +180,6 @@ for year in years:
     plotname = 'philly%s_zoom%s_contour.png' % (year, zoom)
     plt.savefig(plotname, bbox_inches=extent) #save image of plot
     plt.close()
-    ##==============================================================================
-    ## Overlay Map tile and contour plots with Alpha Transparency on whole map
-    ##==============================================================================
-    #import matplotlib.image as mpimg
-    #contourname = 'philly%s_zoom%s_contour.png' %(year, zoom)
-    #contour_img = mpimg.imread(contourname)
-    #mapname = 'philly_zoom%s_map.png' %(zoom) #We load the map for whatever zoom level the variable "zoom" is set to
-    #map_img = mpimg.imread(mapname)  
-    #
-    #fig = plt.figure(figsize=(12,12))
-    #ax = plt.subplot(111)
-    #extent = xmin, xmax, ymin, ymax
-    #contourlayer = plt.imshow(contour_img,interpolation="nearest",extent=extent)
-    #plt.hold(True)
-    #map_layer = plt.imshow(map_img, alpha=.4, interpolation='bilinear',extent=extent)
-    #plt.show()
-    #plotname = 'philly%s_zoom%s_alpha.png' % (year, zoom)
-    #plt.savefig(plotname) % (year) #save image of plot
-    
     #==============================================================================
     # Playing around with setting transparency levels for colors of map
     #==============================================================================
@@ -239,5 +214,5 @@ for year in years:
     plt.show()
     plotname = 'philly%s_zoom%s_overlay.png' % (year, zoom)
     plt.savefig(plotname)  #save image of plot
-
+#
             
