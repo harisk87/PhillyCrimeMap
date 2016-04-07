@@ -203,11 +203,13 @@ def createOverlayImage(year, zoom):
     plt.hold(True)
     map_layer = plt.imshow(map_img, alpha=1, interpolation='bilinear',extent=extent)
     plt.show()
+    extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()) 
     plotname = 'philly%s_zoom%s_overlay.png' % (year, zoom)
-    plt.savefig(plotname)  #save image of plot
+    #plt.savefig(plotname)  #save image of plot
+    plt.savefig(plotname, bbox_inches=extent)
 #
-#years = ['2006','2007','2008', '2009','2010','2011', '2012','2013', '2014']
-years = ['2010','2011','2012']
+years = ['2006','2007','2008', '2009','2010','2011', '2012','2013', '2014']
+#years = ['2010','2011','2012']
 best_bandwidths = []  #We'll keep track of the best bandwidth parameters found for each model by GridSearchCV so we can make sure they all fell within the range tested (results at the lower and upper bounds would indicate that we should retest with a lower/higher range)
 max_crime_densities = [] # Keep track of maximum density estimate for each model (max Z), and use that to set the heatmap levels 
 max_density = 0    
@@ -218,7 +220,22 @@ for year in years:
     max_density = max(max_crime_densities)
 
 #Will create overlay image and save it for a single year
-createOverlayImage('2009',zoom)
-createOverlayImage('2013',zoom)
+for year in years:
+    createOverlayImage(year,zoom)
 
-#
+#==============================================================================
+# Plot with Animation
+#==============================================================================
+import matplotlib.animation as animation
+
+fig = plt.figure()
+
+plotims = []
+for year in years:
+    plotname = 'philly%s_zoom%s_overlay.png' % (year, zoom)
+    overlayim = Image.open(plotname)
+    im = plt.imshow(overlayim)
+    plotims.append([im])
+
+ani = animation.ArtistAnimation(fig, plotims, interval=750, repeat_delay=10000, blit=False)
+plt.show()
