@@ -13,6 +13,7 @@ import StamenTonerTilesAccess as STT
 from sklearn.neighbors import KernelDensity
 from sklearn.grid_search import GridSearchCV
 from matplotlib.widgets import Slider, Button, RadioButtons
+from PIL import Image
 
 #==============================================================================
 # Get Philly Map Tiles
@@ -176,7 +177,6 @@ def createContourPlot(year, zoom, xy, max_density):
 
 def createOverlayImage(year, zoom):
     #Make white/light grey pixels in StamenToner tiles image transparent
-    from PIL import Image
     mapname = 'philly_zoom%s_map.png' %(zoom) #We load the map for whatever zoom level the variable "zoom" is set to
     
     map_img = Image.open(mapname)
