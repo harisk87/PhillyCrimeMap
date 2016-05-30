@@ -227,9 +227,8 @@ for year in years:
 # Plot with Animation
 #==============================================================================
 import matplotlib.animation as animation
-
-fig = plt.figure()
-
+mywriter = animation.FFMpegWriter()
+fig = plt.figure(figsize=(13,13))
 plotims = []
 for year in years:
     plotname = 'philly%s_zoom%s_overlay.png' % (year, zoom)
@@ -238,4 +237,8 @@ for year in years:
     plotims.append([im])
 
 ani = animation.ArtistAnimation(fig, plotims, interval=750, repeat_delay=10000, blit=False)
+
+ani.save('phillycrime_zoom12_animated.mp4', writer=mywriter)
 plt.show()
+
+#plt.close()
