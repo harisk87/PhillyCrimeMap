@@ -222,23 +222,3 @@ for year in years:
 #Will create overlay image and save it for a single year
 for year in years:
     createOverlayImage(year,zoom)
-
-#==============================================================================
-# Plot with Animation
-#==============================================================================
-import matplotlib.animation as animation
-mywriter = animation.FFMpegWriter()
-fig = plt.figure(figsize=(13,13))
-plotims = []
-for year in years:
-    plotname = 'philly%s_zoom%s_overlay.png' % (year, zoom)
-    overlayim = Image.open(plotname)
-    im = plt.imshow(overlayim)
-    plotims.append([im])
-
-ani = animation.ArtistAnimation(fig, plotims, interval=750, repeat_delay=10000, blit=False)
-
-ani.save('phillycrime_zoom12_animated.mp4', writer=mywriter)
-plt.show()
-
-#plt.close()
