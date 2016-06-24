@@ -1,5 +1,16 @@
 README
 
+Modified 06/20/2016 Hari
+————
+#Philly Crime Map
+
+New file: PhillyCrimeMap.ipynb
+
+#Accomplishments
+
+
+
+
 Created: 12/3/2015  Heather
 ————
 This project is an ongoing collaborative effort between Heather Simpson and Hari Sivakumar
