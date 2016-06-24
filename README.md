@@ -1,8 +1,6 @@
 Modified 06/20/2016 Hari
-————
 
 # Notes
-
 -Removed all MATLAB code and figures
 
 -Created a new file PhillyCrimeMap.ipynb to aggregate all findings into a Jupyter notebook
@@ -12,7 +10,6 @@ Modified 06/20/2016 Hari
 -Data picked into file crime_data
 
 # Accomplishments
-
 -Learned to use OpenDataPhilly's API to request for most up-to-date crime data
 
 -Used Seaborn's kdeplot function to reduce the task of the plotting the heat maps to a single line of code. Seaborn plots also look cleaner
@@ -32,7 +29,6 @@ Modified 06/20/2016 Hari
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-There are on average more thefts per night than per day (Cannot reject null hypothesis. Opposite might be true, but need to take into account time theft is reported)
 
 # Future Work
-
 -Use box and violin plots to visualize the data (cleaner than using histograms)
 -Study each type of crime in more detail to see if there are patterns
 -Think of more classifiers for crime such as area of the crime
